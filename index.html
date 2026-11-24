@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web GIS ArcGIS Layout - Drop Off Bulky Waste DKI Jakarta</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-fullscreen@1.0.2/dist/leaflet.fullscreen.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.css" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #e9ecef;
+        }
+
+        .app-header {
+            height: 44px;
+            background-color: #000080;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid #000050;
+            z-index: 1000;
+        }
+
+        .app-header .title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-header .subtitle {
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: normal;
+        }
+
+        .workspace {
+            display: flex;
+            height: calc(100% - 44px);
+            width: 100%;
+        }
+
+        .catalog-pane {
+            width: 290px;
+            min-width: 250px;
+            background-color: #f4f5f7;
+            border-right: 1px solid #c5c9d0;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        .pane-header {
+            background-color: #e1e4e8;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1f2328;
+            border-bottom: 1px solid #c5c9d0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pane-content {
+            padding: 12px 10px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tree-root {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .layer-item {
+            margin-left: 14px;
+            margin-bottom: 6px;
+            padding: 8px 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            color: #1e293b;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            transition: all 0.15s;
+        }
+
+        .layer-item:hover {
+            background-color: #e8eef7;
+            border-color: #93c5fd;
+        }
+
+        .layer-item.primary-layer {
+            color: #000080;
+            background-color: #e8eef7;
+            border: 1px solid #b8c9e6;
+        }
+
+        .layer-item.primary-layer:hover {
+            background-color: #d6e2f5;
+        }
+
+        .layer-hint {
+            margin-top: 14px;
+            margin-left: 14px;
+            padding: 10px;
+            background-color: #fff;
+            border-left: 3px solid #000080;
+            font-size: 11.5px;
+            color: #555;
+            line-height: 1.5;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .context-menu {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            width: 220px;
+            background-color: #ffffff;
+            border: 1px solid #b0b5bc;
+            border-radius: 5px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+            padding: 5px 0;
+            font-size: 13px;
+        }
+
+        .context-menu-item {
+            padding: 9px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #222;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .context-menu-item:hover {
+            background-color: #000080;
+            color: #ffffff;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 4px 0;
+        }
+
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            min-height: 140px;
+        }
+
+        .attribute-panel {
+            display: none;
+            height: 300px;
+            min-height: 120px;
+            max-height: 82%;
+            background-color: #ffffff;
+            flex-direction: column;
+            z-index: 1000;
+            position: relative;
+        }
+
+        .resize-handle {
+            height: 7px;
+            background-color: #000080;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.15s;
+            user-select: none;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.dragging {
+            background-color: #1d4ed8;
+        }
+
+        .resize-handle::after {
+            content: "";
+            width: 44px;
+            height: 2px;
+            border-top: 1px solid rgba(255, 255, 255, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+        }
+
+        .attribute-header {
+            background-color: #f1f3f6;
+            padding: 7px 14px;
+            border-bottom: 1px solid #d0d5dd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .attribute-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #000080;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .attribute-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .size-preset-group {
+            display: inline-flex;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-right: 4px;
+        }
+
+        .btn-size-preset {
+            background-color: #ffffff;
+            color: #334155;
+            border: none;
+            border-right: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-size-preset:last-child {
+            border-right: none;
+        }
+
+        .btn-size-preset:hover {
+            background-color: #e2e8f0;
+            color: #000080;
+        }
+
+        .btn-action-attr {
+            background-color: #000080;
+            color: white;
+            text-decoration: none;
+            border: none;
+            padding: 5px 11px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-action-attr:hover {
+            background-color: #000055;
+        }
+
+        .btn-close-attr {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-close-attr:hover {
+            background-color: #b02a37;
+        }
+
+        .attribute-table-wrapper {
+            flex: 1;
+            overflow: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12.5px;
+        }
+
+        th, td {
+            border: 1px solid #dcdfe4;
+            padding: 7px 10px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #000080;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        td.center-cell {
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        tr:hover {
+            background-color: #eef3fb;
+            cursor: pointer;
+        }
+
+        .btn-zoom-row {
+            color: #000080;
+            border: 1px solid #000080;
+            background-color: #f0f4ff;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-zoom-row:hover {
+            background-color: #000080;
+            color: white;
+        }
+
+        .custom-bulky-marker {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            border: 2.5px solid #ffffff;
+            border-radius: 50%;
+            width: 34px !important;
+            height: 34px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+            font-size: 15px;
+            transition: transform 0.15s ease;
+        }
+
+        .custom-bulky-marker:hover {
+            transform: scale(1.18);
+            background: linear-gradient(135deg, #000080 0%, #1e40af 100%);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-top: 4px solid #dc2626;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        .popup-card-title {
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 14px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+        }
+
+        .popup-card-table {
+            width: 100%;
+            font-size: 12.5px;
+            border-collapse: collapse;
+        }
+
+        .popup-card-table td {
+            padding: 3px 0;
+            border: none;
+            vertical-align: top;
+        }
+
+        .popup-card-table td:first-child {
+            font-weight: 600;
+            color: #475569;
+            width: 82px;
+        }
+
+        .geoserver-legend-box {
+            background: rgba(255, 255, 255, 0.96);
+            padding: 12px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            font-size: 12.5px;
+            color: #1e293b;
+            min-width: 215px;
+        }
+
+        .geoserver-legend-box h4 {
+            margin-bottom: 8px;
+            font-size: 13.5px;
+            color: #000080;
+            border-bottom: 2px solid #000080;
+            padding-bottom: 4px;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 7px;
+            gap: 9px;
+        }
+
+        .legend-point-badge {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            border: 1.5px solid #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .legend-section {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .legend-subtitle {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <div class="title-group">
+            <i class="fa-solid fa-earth-asia"></i>
+            <span>Web GIS - Drop Off Bulky Waste DKI Jakarta</span>
+        </div>
+        <span class="subtitle">ArcGIS Workspace (GeoServer WMS & Leaflet)</span>
+    </div>
+
+    <div class="workspace">
+        <div class="catalog-pane">
+            <div class="pane-header">
+                <i class="fa-solid fa-folder-tree"></i>
+                <span>Catalog & Contents</span>
+            </div>
+            <div class="pane-content">
+                <div class="tree-root">
+                    <i class="fa-solid fa-caret-down"></i>
+                    <i class="fa-solid fa-server" style="color: #000080;"></i>
+                    <span>geoserver:bulky_ws</span>
+                </div>
+
+                <div class="layer-item primary-layer" oncontextmenu="showContextMenu(event)" onclick="toggleAttributeTable()">
+                    <input type="checkbox" id="chk-titik" checked onclick="togglePrimaryLayer(event)">
+                    <i class="fa-solid fa-trash-can" style="color: #dc2626;"></i>
+                    <span>Drop Off Bulky Waste</span>
+                </div>
+
+                <div class="layer-item" onclick="document.getElementById('chk-jalan').click()">
+                    <input type="checkbox" id="chk-jalan" checked onclick="toggleWmsLayer(event, wmsJalanDki)">
+                    <i class="fa-solid fa-road" style="color: #d97706;"></i>
+                    <span>Jaringan Jalan DKI Jakarta</span>
+                </div>
+
+                <div class="layer-item" onclick="document.getElementById('chk-batas').click()">
+                    <input type="checkbox" id="chk-batas" checked onclick="toggleWmsLayer(event, wmsBatasDki)">
+                    <i class="fa-solid fa-draw-polygon" style="color: #0d3b66;"></i>
+                    <span>Batas Kecamatan DKI Jakarta</span>
+                </div>
+
+                <div class="layer-hint">
+                    <strong>Petunjuk Penggunaan:</strong><br>
+                    • Klik atau klik kanan pada layer <b>Drop Off Bulky Waste</b> untuk membuka <b>Attribute Table</b>.<br>
+                    • Tarik garis biru di atas Attribute Table atau pilih preset ukuran untuk menyesuaikan tinggi tabel.
+                </div>
+            </div>
+        </div>
+
+        <div class="main-area" id="main-area">
+            <div id="map"></div>
+
+            <div class="attribute-panel" id="attribute-panel">
+                <div class="resize-handle" id="resize-handle" title="Tarik ke atas/bawah untuk mengatur tinggi Attribute Table"></div>
+                <div class="attribute-header">
+                    <div class="attribute-title">
+                        <i class="fa-solid fa-table"></i>
+                        <span>Attribute Table: Drop Off Bulky Waste (<span id="row-count">0</span> records)</span>
+                    </div>
+                    <div class="attribute-actions">
+                        <div class="size-preset-group" title="Atur Tinggi Panel Tabel">
+                            <button type="button" class="btn-size-preset" onclick="setAttributeHeight(22)">Kecil</button>
+                            <button type="button" class="btn-size-preset" onclick="setAttributeHeight(42)">Sedang</button>
+                            <button type="button" class="btn-size-preset" onclick="setAttributeHeight(72)">Besar</button>
+                        </div>
+                        <button type="button" class="btn-action-attr" onclick="loadAttributeTable()">
+                            <i class="fa-solid fa-rotate"></i> Refresh Data
+                        </button>
+                        <button type="button" class="btn-close-attr" onclick="closeAttributeTable()">
+                            <i class="fa-solid fa-xmark"></i> Tutup
+                        </button>
+                    </div>
+                </div>
+
+                <div class="attribute-table-wrapper" id="attribute-table-container">
+                    <p style="text-align:center; padding:20px; color:#555;">Memuat data atribut...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="openAttributeTable()">
+            <i class="fa-solid fa-table"></i>
+            <span>Open Attribute Table</span>
+        </div>
+        <div class="context-menu-item" onclick="zoomToLayer()">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+            <span>Zoom to Layer</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="loadAttributeTable()">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Refresh Layer Data</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-fullscreen@1.0.2/dist/Leaflet.fullscreen.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.js"></script>
+
+    <script>
+        var map = L.map('map', {
+            center: [-6.2088, 106.8456],
+            zoom: 11,
+            fullscreenControl: true
+        });
+
+        map.createPane('panePoligon');
+        map.getPane('panePoligon').style.zIndex = 410;
+
+        map.createPane('paneGaris');
+        map.getPane('paneGaris').style.zIndex = 430;
+
+        map.createPane('paneTitik');
+        map.getPane('paneTitik').style.zIndex = 450;
+
+        var esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri'
+        }).addTo(map);
+
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        var geoserverWmsUrl = "http://localhost:8080/geoserver/bulky_ws/wms";
+
+        var wmsBatasDki = L.tileLayer.wms(geoserverWmsUrl, {
+            layers: "bulky_ws:batas_dki_jakarta",
+            format: "image/png",
+            transparent: true,
+            version: "1.1.1",
+            pane: "panePoligon"
+        }).addTo(map);
+
+        var wmsJalanDki = L.tileLayer.wms(geoserverWmsUrl, {
+            layers: "bulky_ws:jalan_dki_jakarta",
+            format: "image/png",
+            transparent: true,
+            version: "1.1.1",
+            pane: "paneGaris"
+        }).addTo(map);
+
+        var wmsBulkyWaste = L.tileLayer.wms(geoserverWmsUrl, {
+            layers: "bulky_ws:bulky_waste_jkt",
+            format: "image/png",
+            transparent: true,
+            version: "1.1.1",
+            pane: "paneTitik"
+        }).addTo(map);
+
+        var bulkyMarkerGroup = L.layerGroup().addTo(map);
+
+        var bulkyTrashIcon = L.divIcon({
+            html: '<i class="fa-solid fa-trash-can"></i>',
+            className: 'custom-bulky-marker',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18],
+            tooltipAnchor: [0, -18]
+        });
+
+        var baseMaps = {
+            "Esri Satelit": esriSat,
+            "OpenStreetMap": osm,
+            "Google Satellite": googleSat
+        };
+
+        var overlayMaps = {
+            "Titik Drop Off Bulky Waste": bulkyMarkerGroup,
+            "Jaringan Jalan DKI Jakarta": wmsJalanDki,
+            "Batas Kecamatan DKI Jakarta": wmsBatasDki
+        };
+
+        L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'topright' }).addTo(map);
+        L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+        L.control.locate({
+            position: 'topleft',
+            strings: { title: "Tampilkan Lokasi Saya" },
+            flyTo: true
+        }).addTo(map);
+
+        var legendControl = L.control({ position: 'bottomright' });
+        legendControl.onAdd = function () {
+            var div = L.DomUtil.create('div', 'geoserver-legend-box');
+            var legendJalan = geoserverWmsUrl + "?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=bulky_ws:jalan_dki_jakarta";
+            var legendPoligon = geoserverWmsUrl + "?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=bulky_ws:batas_dki_jakarta";
+            div.innerHTML =
+                "<h4>Legenda Peta</h4>" +
+                "<div class='legend-row'><span class='legend-point-badge'><i class='fa-solid fa-trash-can'></i></span><span>Drop Off Bulky Waste</span></div>" +
+                "<div class='legend-row'><img src='" + legendJalan + "'><span>Jaringan Jalan DKI Jakarta</span></div>" +
+                "<div class='legend-section'>" +
+                    "<div class='legend-subtitle'>Batas Administrasi DKI Jakarta</div>" +
+                    "<img src='" + legendPoligon + "'>" +
+                "</div>";
+            return div;
+        };
+        legendControl.addTo(map);
+
+        map.on('overlayadd', function(e) {
+            if (e.layer === bulkyMarkerGroup) {
+                document.getElementById('chk-titik').checked = true;
+                map.addLayer(wmsBulkyWaste);
+            }
+            if (e.layer === wmsJalanDki) document.getElementById('chk-jalan').checked = true;
+            if (e.layer === wmsBatasDki) document.getElementById('chk-batas').checked = true;
+        });
+
+        map.on('overlayremove', function(e) {
+            if (e.layer === bulkyMarkerGroup) {
+                document.getElementById('chk-titik').checked = false;
+                map.removeLayer(wmsBulkyWaste);
+            }
+            if (e.layer === wmsJalanDki) document.getElementById('chk-jalan').checked = false;
+            if (e.layer === wmsBatasDki) document.getElementById('chk-batas').checked = false;
+        });
+
+        map.on('click', function (e) {
+            var activeLayers = [];
+            if (map.hasLayer(wmsJalanDki)) activeLayers.push('bulky_ws:jalan_dki_jakarta');
+            if (map.hasLayer(wmsBatasDki)) activeLayers.push('bulky_ws:batas_dki_jakarta');
+            if (activeLayers.length === 0) return;
+
+            var point = map.latLngToContainerPoint(e.latlng, map.getZoom());
+            var size = map.getSize();
+            var layersParam = activeLayers.join(',');
+
+            var params = {
+                request: 'GetFeatureInfo',
+                service: 'WMS',
+                srs: 'EPSG:4326',
+                styles: '',
+                transparent: true,
+                version: '1.1.1',
+                format: 'image/png',
+                bbox: map.getBounds().toBBoxString(),
+                height: size.y,
+                width: size.x,
+                layers: layersParam,
+                query_layers: layersParam,
+                info_format: 'application/json',
+                feature_count: 5,
+                x: Math.round(point.x),
+                y: Math.round(point.y)
+            };
+
+            var url = geoserverWmsUrl + L.Util.getParamString(params);
+
+            fetch(url)
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (!data.features || data.features.length === 0) return;
+
+                    var jalanFeature = data.features.find(function (f) {
+                        return f.id && f.id.indexOf('jalan_dki_jakarta') !== -1;
+                    });
+
+                    var popupContent = '';
+                    if (jalanFeature) {
+                        var j = jalanFeature.properties;
+                        popupContent =
+                            '<div style="font-size:13px; line-height:1.5;">' +
+                            '<strong style="color:#d97706; font-size:14px;">' + (j.name || j.NAMRJL || 'Ruas Jalan DKI Jakarta') + '</strong><br>' +
+                            '<b>Kelas/Fungsi:</b> ' + (j.fclass || j.REMARK || '-') +
+                            '</div>';
+                    } else {
+                        var k = data.features[0].properties;
+                        popupContent =
+                            '<div style="font-size:13px; line-height:1.5;">' +
+                            '<strong style="color:#0d3b66; font-size:14px;">Kecamatan ' + (k.NAME_3 || '-') + '</strong><br>' +
+                            '<b>Kota/Kab:</b> ' + (k.NAME_2 || '-') + '<br>' +
+                            '<b>Provinsi:</b> ' + (k.NAME_1 || 'DKI Jakarta') +
+                            '</div>';
+                    }
+
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(popupContent)
+                        .openOn(map);
+                })
+                .catch(function (err) {
+                    console.error('Error GetFeatureInfo:', err);
+                });
+        });
+
+        var layerBounds = [];
+        var markerMap = {};
+
+        function buildPopupHtml(item) {
+            return `
+                <div class="popup-card-title">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>${item.nama_object || 'Titik Drop Off'}</span>
+                </div>
+                <table class="popup-card-table">
+                    <tr><td>Alamat</td><td>: ${item.alamat || '-'}</td></tr>
+                    <tr><td>Kelurahan</td><td>: ${item.kelurahan || '-'}</td></tr>
+                    <tr><td>Kecamatan</td><td>: ${item.kecamatan || '-'}</td></tr>
+                    <tr><td>Kota</td><td>: ${item.kota || '-'}</td></tr>
+                    <tr><td>Koordinat</td><td>: ${item.latitude}, ${item.longitude}</td></tr>
+                </table>
+            `;
+        }
+
+        function renderLocations(data) {
+            var container = document.getElementById('attribute-table-container');
+            document.getElementById('row-count').textContent = data.length;
+            layerBounds = [];
+            markerMap = {};
+            bulkyMarkerGroup.clearLayers();
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:20px;">Belum ada data pada tabel bulky_waste.</p>';
+                return;
+            }
+
+            var html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>OBJECTID</th>
+                            <th>Nama Object</th>
+                            <th>Alamat</th>
+                            <th>Y (Latitude)</th>
+                            <th>X (Longitude)</th>
+                            <th>Kelurahan</th>
+                            <th>Kecamatan</th>
+                            <th>Kota</th>
+                            <th>Navigasi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(function(item, index) {
+                var lat = parseFloat(item.latitude);
+                var lng = parseFloat(item.longitude);
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    layerBounds.push([lat, lng]);
+
+                    var marker = L.marker([lat, lng], {
+                        icon: bulkyTrashIcon,
+                        pane: 'paneTitik'
+                    });
+
+                    marker.bindTooltip(
+                        '<div style="font-size:12px;"><strong>' + (item.nama_object || 'Drop Off') + '</strong><br><span style="color:#555;">' + (item.kecamatan || '') + '</span></div>',
+                        { direction: 'top', opacity: 0.95 }
+                    );
+
+                    marker.bindPopup(buildPopupHtml(item), { maxWidth: 290 });
+                    bulkyMarkerGroup.addLayer(marker);
+                    markerMap[index] = marker;
+                }
+
+                html += `
+                    <tr onclick="zoomToFeature(${index}, ${lat}, ${lng})">
+                        <td class="center-cell">${index + 1}</td>
+                        <td><strong>${item.nama_object || '-'}</strong></td>
+                        <td>${item.alamat || '-'}</td>
+                        <td class="center-cell">${item.latitude || '-'}</td>
+                        <td class="center-cell">${item.longitude || '-'}</td>
+                        <td>${item.kelurahan || '-'}</td>
+                        <td>${item.kecamatan || '-'}</td>
+                        <td>${item.kota || '-'}</td>
+                        <td class="center-cell">
+                            <button type="button" class="btn-zoom-row" onclick="event.stopPropagation(); zoomToFeature(${index}, ${lat}, ${lng})">
+                                <i class="fa-solid fa-crosshairs"></i> Zoom
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function loadAttributeTable() {
+            var container = document.getElementById('attribute-table-container');
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#555;">Memuat data dari database...</p>';
+
+            fetch('get_data.php')
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
+                    renderLocations(data);
+                })
+                .catch(function() {
+                    var wfsUrl = "http://localhost:8080/geoserver/bulky_ws/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=bulky_ws:bulky_waste_jkt&outputFormat=application/json";
+                    fetch(wfsUrl)
+                        .then(function(res) { return res.json(); })
+                        .then(function(geojson) {
+                            var mapped = (geojson.features || []).map(function(f) { return f.properties; });
+                            renderLocations(mapped);
+                        })
+                        .catch(function() {
+                            container.innerHTML = '<p style="text-align:center; padding:20px; color:#dc3545;">Gagal memuat data. Pastikan <b>get_data.php</b> satu folder dengan <b>index.html</b> dan XAMPP + GeoServer aktif.</p>';
+                        });
+                });
+        }
+
+        loadAttributeTable();
+
+        function zoomToFeature(index, lat, lng) {
+            if (isNaN(lat) || isNaN(lng)) return;
+            map.flyTo([lat, lng], 16);
+            if (markerMap[index]) {
+                setTimeout(function() {
+                    markerMap[index].openPopup();
+                }, 400);
+            }
+        }
+
+        function zoomToLayer() {
+            if (layerBounds.length > 0) {
+                map.fitBounds(layerBounds, { padding: [50, 50] });
+            } else {
+                map.setView([-6.2088, 106.8456], 11);
+            }
+        }
+
+        function togglePrimaryLayer(event) {
+            event.stopPropagation();
+            if (event.target.checked) {
+                map.addLayer(bulkyMarkerGroup);
+                map.addLayer(wmsBulkyWaste);
+            } else {
+                map.removeLayer(bulkyMarkerGroup);
+                map.removeLayer(wmsBulkyWaste);
+            }
+        }
+
+        function toggleWmsLayer(event, wmsLayer) {
+            event.stopPropagation();
+            if (event.target.checked) {
+                map.addLayer(wmsLayer);
+            } else {
+                map.removeLayer(wmsLayer);
+            }
+        }
+
+        function showContextMenu(event) {
+            event.preventDefault();
+            var menu = document.getElementById('context-menu');
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+        }
+
+        document.addEventListener('click', function() {
+            document.getElementById('context-menu').style.display = 'none';
+        });
+
+        function openAttributeTable() {
+            var panel = document.getElementById('attribute-panel');
+            panel.style.display = 'flex';
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        }
+
+        function closeAttributeTable() {
+            var panel = document.getElementById('attribute-panel');
+            panel.style.display = 'none';
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        }
+
+        function toggleAttributeTable() {
+            var panel = document.getElementById('attribute-panel');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                openAttributeTable();
+            } else {
+                closeAttributeTable();
+            }
+        }
+
+        function setAttributeHeight(percent) {
+            var panel = document.getElementById('attribute-panel');
+            var mainArea = document.getElementById('main-area');
+            var targetHeight = Math.round(mainArea.clientHeight * (percent / 100));
+            panel.style.height = targetHeight + 'px';
+            map.invalidateSize();
+        }
+
+        (function initAttributeResizer() {
+            var handle = document.getElementById('resize-handle');
+            var panel = document.getElementById('attribute-panel');
+            var mainArea = document.getElementById('main-area');
+            var isResizing = false;
+
+            handle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                handle.classList.add('dragging');
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                var rect = mainArea.getBoundingClientRect();
+                var newHeight = rect.bottom - e.clientY;
+                var minH = 120;
+                var maxH = Math.round(rect.height * 0.82);
+
+                if (newHeight >= minH && newHeight <= maxH) {
+                    panel.style.height = newHeight + 'px';
+                    map.invalidateSize();
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (!isResizing) return;
+                isResizing = false;
+                handle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                map.invalidateSize();
+            });
+        })();
+    </script>
+</body>
+</html>
